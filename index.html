@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CATZILLA - ULTIMATE DEMON EDITION</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+        overflow:hidden; 
+        background:linear-gradient(135deg, #001122 0%, #002244 100%);
+        cursor:none !important;
+        user-select:none;
+        font-family: 'Arial Black', Arial, sans-serif;
+    }
+    canvas { display:block; }
+    
+    /* GLOWING BLUE CROSSHAIR */
+    #crosshair {
+        position:fixed; width:36px; height:36px; pointer-events:none; z-index:9999;
+        transform:translate(-50%,-50%); opacity:0.95;
+    }
+    #crosshair::before, #crosshair::after {
+        content:''; position:absolute; background:#e0f8ff;
+        box-shadow:0 0 35px #60d8ff, 0 0 70px #a0e8ff, inset 0 0 10px rgba(255,255,255,0.3);
+        border-radius:6px;
+    }
+    #crosshair::before { width:100%; height:6px; top:15px; }
+    #crosshair::after { width:6px; height:100%; left:15px; }
+
+    /* REWORKED UI - CLEAN & BOLD */
+    #ui { 
+        position:fixed; top:0; left:0; width:100%; height:100%; 
+        pointer-events:none; z-index:100; 
+        color:#e0f8ff; text-shadow:0 0 20px #60d8ff;
+        font-weight:900; font-size:28px;
+    }
+    .stat { position:absolute; left:30px; background:rgba(0,30,60,0.8); padding:15px 25px; border-radius:15px; border:2px solid #60d8ff; backdrop-filter:blur(15px); box-shadow:0 0 30px rgba(96,216,255,0.5); }
+    #score { top:25px; }
+    #weapon { top:90px; }
+    #health { top:155px; }
+    #res { top:220px; }
+
+    /* BUTTONS - GLOSSY & SMOOTH */
+    button { 
+        pointer-events:all; 
+        background:linear-gradient(145deg, rgba(0,50,100,0.95), rgba(0,30,70,0.95));
+        border:3px solid #60d8ff; color:#e0f8ff; 
+        padding:16px 32px; border-radius:20px; font-size:20px; font-weight:bold;
+        cursor:pointer; transition:all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+        box-shadow:0 8px 25px rgba(96,216,255,0.4), inset 0 2px 10px rgba(255,255,255,0.1);
+        text-shadow:0 2px 8px rgba(0,0,0,0.5);
+    }
+    button:hover { 
+        transform:translateY(-3px) scale(1.08); 
+        box-shadow:0 15px 40px rgba(96,216,255,0.7), inset 0 2px 15px rgba(255,255,255,0.2);
+        background:linear-gradient(145deg, rgba(0,70,140,0.98), rgba(0,50,110,0.98));
+    }
+    button:active { transform:translateY(-1px) scale(1.03); }
+
+    #shopBtn { position:absolute; top:25px; right:320px; }
+    #settingsBtn { position:absolute; top:25px; right:170px; }
+    #adminBtn { position:absolute; top:25px; right:20px; }
+
+    /* PANELS WITH SCROLLBARS */
+    #shop,#settings,#admin {
+        position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0);
+        background:linear-gradient(145deg, rgba(0,20,50,0.98), rgba(0,10,30,0.98));
+        backdrop-filter:blur(30px); border-radius:25px; border:4px solid #60d8ff;
+        width:850px; max-height:90vh; transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+        box-shadow:0 20px 80px rgba(96,216,255,0.6); color:#e0f8ff;
+        padding:50px; text-align:center; overflow:hidden;
+    }
+    #shop.open,#settings.open,#admin.open { transform:translate(-50%,-50%) scale(1); }
+    
+    /* SCROLLABLE CONTENT */
+    .panel-content { max-height:70vh; overflow-y:auto; padding-right:20px; margin-bottom:30px; }
+    .panel-content::-webkit-scrollbar { width:12px; }
+    .panel-content::-webkit-scrollbar-track { background:rgba(0,20,50,0.5); border-radius:10px; }
+    .panel-content::-webkit-scrollbar-thumb { background:linear-gradient(#60d8ff, #a0e8ff); border-radius:10px; box-shadow:inset 0 0 6px rgba(255,255,255,0.3); }
+    .panel-content::-webkit-scrollbar-thumb:hover { background:linear-gradient(#80e8ff, #c0f8ff); }
+
+    .weapon-btn,.setting-btn,.admin-btn {
+        display:block; width:95%; margin:12px auto; padding:22px;
+        background:linear-gradient(145deg, rgba(0,60,120,0.8), rgba(0,40,90,0.8));
+        border:3px solid #40b8ff; border-radius:18px; color:#e0f8ff; 
+        font-size:22px; font-weight:bold; cursor:pointer; transition:all 0.3s;
+        box-shadow:0 6px 20px rgba(64,184,255,0.4);
+        text-shadow:0 2px 8px rgba(0,0,0,0.5);
+    }
+    .weapon-btn:hover,.setting-btn:hover,.admin-btn:hover { 
+        transform:translateY(-2px) scale(1.03); 
+        box-shadow:0 12px 35px rgba(96,216,255,0.7);
+        background:linear-gradient(145deg, rgba(0,80,160,0.95), rgba(0,60,130,0.95));
+        border-color:#a0e8ff;
+    }
+    .weapon-btn.owned { 
+        background:linear-gradient(145deg, #004488, #003366); 
+        border-color:#e0f8ff; box-shadow:0 0 30px rgba(224,248,255,0.6);
+    }
+    h1 { font-size:52px; text-shadow:0 0 40px #a0e8ff; margin-bottom:30px; }
+    .pulse { animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:0.8; transform:scale(1);} 50%{opacity:1; transform:scale(1.05);} }
+</style>
+</head>
+<body>
+
+<div id="crosshair"></div>
+<canvas id="c"></canvas>
+
+<div id="ui">
+    <div id="score" class="stat">SCORE: 0</div>
+    <div id="weapon" class="stat">WEAPON: Basic Blaster</div>
+    <div id="health" class="stat">HEALTH: 1000/1000</div>
+    <div id="res" class="stat">RES: 1650x1080</div>
+    <button id="shopBtn">🛒 WEAPON SHOP</button>
+    <button id="settingsBtn">⚙️ SETTINGS</button>
+    <button id="adminBtn">👹 DEMON MODE</button>
+</div>
+
+<!-- SHOP WITH SCROLL -->
+<div id="shop">
+    <h1 class="pulse">🔫 WEAPON SHOP 🔫</h1>
+    <div class="panel-content">
+        <button class="weapon-btn owned" data-id="0">Basic Blaster <span style="float:right;color:#a0e8ff">OWNED</span></button>
+        <button class="weapon-btn" data-id="1">Ice Blaster <span style="float:right">5,000</span></button>
+        <button class="weapon-btn" data-id="2">Frost Rifle <span style="float:right">15,000</span></button>
+        <button class="weapon-btn" data-id="3">Glacier Cannon <span style="float:right">40,000</span></button>
+        <button class="weapon-btn" data-id="4">Arctic Claw <span style="float:right">100,000</span></button>
+        <button class="weapon-btn" data-id="5">Plasma Freezer <span style="float:right">250,000</span></button>
+        <button class="weapon-btn" data-id="6">Quantum Storm <span style="float:right">600,000</span></button>
+    </div>
+    <button onclick="toggleShop()" style="width:280px;font-size:24px;">🚪 CLOSE SHOP</button>
+</div>
+
+<!-- SETTINGS WITH SCROLL -->
+<div id="settings">
+    <h1 class="pulse">⚙️ GAME SETTINGS ⚙️</h1>
+    <div class="panel-content">
+        <button class="setting-btn" onclick="cycleRes()">📐 Resolution: <span id="resStatus">1650x1080</span></button>
+        <button class="setting-btn" onclick="cycleTrail()">✨ Bullet Trails: <span id="trailStatus">Lines</span></button>
+        <button class="setting-btn" onclick="toggleFullscreen()">🌕 Fullscreen: <span id="fsStatus">OFF</span></button>
+        <button class="setting-btn" onclick="cycleParticles()">💥 Particle Quality: <span id="partStatus">High</span></button>
+        <button class="setting-btn" onclick="clearTrails()">🧹 Clear Trails</button>
+    </div>
+    <button onclick="toggleSettings()" style="width:280px;font-size:24px;">🚪 CLOSE SETTINGS</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin">
+    <h1>👹 DEMON PANEL 👹</h1>
+    <input type="password" id="pass" placeholder="Enter: demondung" style="width:85%;padding:20px;margin:25px auto;display:block;background:rgba(0,50,100,0.9);border:3px solid #60d8ff;border-radius:15px;color:#fff;font-size:20px;font-weight:bold;text-align:center;">
+    <button class="admin-btn" onclick="login()" style="width:350px;font-size:24px;">🔥 UNLEASH DEMON 🔥</button>
+    <div id="powers" style="display:none;margin-top:40px;">
+        <div class="panel-content">
+            <button class="admin-btn" onclick="t('aimbot')">🎯 Aimbot: <span id="aimbot">OFF</span></button>
+            <button class="admin-btn" onclick="t('god')">⚡ God Weapons: <span id="god">OFF</span></button>
+            <button class="admin-btn" onclick="t('inf')">♥️ Infinite Health: <span id="inf">OFF</span></button>
+            <button class="admin-btn" onclick="t('ot')">💀 One Tap Kill: <span id="ot">OFF</span></button>
+            <button class="admin-btn" onclick="t('shield')">🛡️ Super Shield: <span id="shield">OFF</span></button>
+            <button class="admin-btn" onclick="spawnWave()">👹 Spawn 150 Demons</button>
+            <button class="admin-btn" onclick="score+=5000000;ui()">💎 +5M Points</button>
+            <button class="admin-btn" onclick="maxWeapons()">🏆 Max All Weapons</button>
+        </div>
+    </div>
+    <button onclick="toggleAdmin()" style="width:280px;font-size:24px;">🚪 CLOSE DEMON PANEL</button>
+</div>
+
+<script>
+// === ULTRA-OPTIMIZED CORE ===
+const c = document.getElementById('c');
+const ctx = c.getContext('2d', { alpha: false }); // NO LAG
+let W = 1650, H = 1080, resMode = 1, maxHealth = 1000;
+const resOptions = [
+    {w:1280,h:720,name:"1280x720"},
+    {w:1650,h:1080,name:"1650x1080"},
+    {w:1920,h:1080,name:"1920x1080"},
+    {w:2560,h:1440,name:"2560x1440"}
+];
+
+function resize() {
+    W = resOptions[resMode].w; H = resOptions[resMode].h;
+    c.width = W; c.height = H;
+    c.style.width = '100vw'; c.style.height = '100vh';
+    player.x = W/2; player.y = H/2;
+}
+resize(); window.addEventListener('resize', resize);
+
+// === CROSSHAIR ===
+const crosshair = document.getElementById('crosshair');
+document.addEventListener('mousemove', e => {
+    crosshair.style.left = e.clientX + 'px';
+    crosshair.style.top = e.clientY + 'px';
+});
+
+let mx = W/2, my = H/2;
+c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.clientX-r.left)*(W/r.width);
+    my = (e.clientY-r.top)*(H/r.height);
+});
+
+// === STATE (1000 HP) ===
+let score = 0, health = 1000, weapon = 0, wave = 0;
+let aimbot = false, god = false, inf = false, ot = false, shield = false;
+let keys = {}, lastShot = 0, paused = false;
+let trailStyle = 0, particleQuality = 2, fullscreen = false;
+
+const weapons = [
+    {n:"Basic Blaster", dmg:20, rate:12, col:"#60d8ff", cost:0},
+    {n:"Ice Blaster", dmg:45, rate:9, col:"#80e8ff", cost:5000},
+    {n:"Frost Rifle", dmg:90, rate:14, col:"#a0f8ff", cost:15000},
+    {n:"Glacier Cannon",dmg:200,rate:7, col:"#c0ffff", cost:40000},
+    {n:"Arctic Claw", dmg:400,rate:18, col:"#e0f8ff", cost:100000},
+    {n:"Plasma Freezer",dmg:800,rate:22, col:"#f0f8ff", cost:250000},
+    {n:"Quantum Storm", dmg:2000,rate:28,col:"#ffffff", cost:600000}
+];
+
+let player = {x:W/2, y:H/2, r:30, trail:[], speed:12};
+let bullets = [], enemies = [], bosses = [], parts = [];
+
+// === INPUT (NO LAG) ===
+window.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    keys[k] = true;
+    if(k === 'f') toggleFullscreen();
+});
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// BHC ADMIN
+let seq = "";
+window.addEventListener('keydown', e => {
+    seq += e.key.toLowerCase();
+    if(seq.includes('bhc')) toggleAdmin();
+    if(seq.length > 10) seq = "";
+});
+
+// === PANEL CONTROLS ===
+document.getElementById('shopBtn').onclick = () => { paused = !paused; document.getElementById('shop').classList.toggle('open'); updateShop(); };
+document.getElementById('settingsBtn').onclick = () => { paused = !paused; document.getElementById('settings').classList.toggle('open'); };
+document.getElementById('adminBtn').onclick = toggleAdmin;
+
+function toggleShop() { paused = !paused; document.getElementById('shop').classList.toggle('open'); updateShop(); }
+function toggleSettings() { paused = !paused; document.getElementById('settings').classList.toggle('open'); }
+function toggleAdmin() { document.getElementById('admin').classList.toggle('open'); }
+
+function login() {
+    if(document.getElementById('pass').value === 'demondung') {
+        document.getElementById('powers').style.display = 'block';
+        document.getElementById('pass').value = '';
+        alert('👹 DEMON MODE FULLY UNLEASHED 👹');
+    } else {
+        document.getElementById('pass').style.borderColor = '#ff4444';
+        setTimeout(() => document.getElementById('pass').style.borderColor = '#60d8ff', 500);
+    }
+}
+
+function t(x) {
+    window[x] = !window[x];
+    document.getElementById(x).textContent = window[x] ? 'ON' : 'OFF';
+    document.getElementById(x).parentElement.style.background = window[x] ? 'linear-gradient(145deg, #004488, #003366)' : '';
+}
+
+function spawnWave() { for(let i=0; i<150; i++) spawn(); }
+function maxWeapons() { weapon=6; score+=10000000; ui(); updateShop(); }
+
+function ui() {
+    document.getElementById('score').textContent = `SCORE: ${score.toLocaleString()}`;
+    document.getElementById('weapon').textContent = `WEAPON: ${weapons[weapon].n}`;
+    if(!inf) document.getElementById('health').textContent = `HEALTH: ${health}/${maxHealth}`;
+    document.getElementById('res').textContent = `RES: ${resOptions[resMode].name}`;
+}
+
+// === SETTINGS ===
+function cycleRes() {
+    resMode = (resMode + 1) % resOptions.length;
+    resize();
+    document.getElementById('resStatus').textContent = resOptions[resMode].name;
+}
+
+function cycleTrail() {
+    trailStyle = (trailStyle + 1) % 2;
+    document.getElementById('trailStatus').textContent = trailStyle === 0 ? 'Lines' : 'Circles';
+}
+
+function toggleFullscreen() {
+    fullscreen = !fullscreen;
+    document.getElementById('fsStatus').textContent = fullscreen ? 'ON' : 'OFF';
+    if(fullscreen) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+}
+
+function cycleParticles() {
+    particleQuality = (particleQuality + 1) % 4;
+    const qualities = ['Low', 'Medium', 'High', 'Ultra'];
+    document.getElementById('partStatus').textContent = qualities[particleQuality];
+}
+
+function clearTrails() {
+    player.trail = []; bullets.forEach(b => b.trail = []); enemies.forEach(e => e.trail = []);
+}
+
+// === ULTRA-FAST SPAWN ===
+function spawn() {
+    const s = Math.floor(Math.random()*4);
+    let x, y;
+    if(s===0) {x=Math.random()*W;y=-100;}
+    else if(s===1) {x=W+100;y=Math.random()*H;}
+    else if(s===2) {x=Math.random()*W;y=H+100;}
+    else {x=-100;y=Math.random()*H;}
+    enemies.push({
+        x, y, r:32, speed:2.5+Math.random()*1.2, hp:30, max:30, trail:[]
+    });
+}
+
+setInterval(() => { if(enemies.length < 50) spawn(); }, 300);
+
+setInterval(() => {
+    if(bosses.length > 0 || enemies.length > 10) return;
+    wave++;
+    bosses.push({
+        x:W/2, y:-400, w:280+wave*30, h:280+wave*30,
+        hp:3000+wave*1500, max:3000+wave*1500,
+        name:`ICE LORD ${wave}`
+    });
+}, 1500);
+
+// === MAIN LOOP (60+ FPS GUARANTEED) ===
+let frameCount = 0;
+function loop() {
+    frameCount++;
+    ctx.fillStyle = 'rgba(0,10,25,0.18)'; // FASTER FADE
+    ctx.fillRect(0, 0, W, H);
+
+    // ALWAYS MOVE (NO PAUSE AFFECTS ENEMIES)
+    if(keys['w']||keys['arrowup']) player.y -= player.speed;
+    if(keys['s']||keys['arrowdown']) player.y += player.speed;
+    if(keys['a']||keys['arrowleft']) player.x -= player.speed;
+    if(keys['d']||keys['arrowright']) player.x += player.speed;
+    player.x = Math.max(player.r, Math.min(W-player.r, player.x));
+    player.y = Math.max(player.r, Math.min(H-player.r, player.y));
+    
+    player.trail.push({x:player.x, y:player.y});
+    if(player.trail.length > 25) player.trail.shift();
+
+    if(keys[' '] && !paused) shoot();
+
+    updateBullets();
+    updateEnemies();
+    updateBosses();
+    updateParticles();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// === PERFECT SHOOT ===
+function shoot() {
+    const now = Date.now();
+    const w = god ? weapons[6] : weapons[weapon];
+    if(now - lastShot < 1000 / w.rate) return;
+    lastShot = now;
+
+    let tx = mx, ty = my;
+    if(aimbot) {
+        let best = null, dist = Infinity;
+        [...bosses, ...enemies].forEach(t => {
+            const d = Math.hypot(t.x-player.x, t.y-player.y);
+            if(d < dist) { dist = d; best = t; }
+        });
+        if(best) { tx = best.x; ty = best.y; }
+    }
+
+    const dx = tx - player.x, dy = ty - player.y, d = Math.hypot(dx, dy) || 1;
+    bullets.push({
+        x:player.x, y:player.y, vx:(dx/d)*35, vy:(dy/d)*35,
+        dmg:ot ? 999999 : w.dmg, col:w.col, trail:[]
+    });
+}
+
+// === FAST UPDATES ===
+function updateBullets() {
+    for(let i=bullets.length-1; i>=0; i--) {
+        const b = bullets[i];
+        b.x += b.vx; b.y += b.vy;
+        b.trail.push({x:b.x,y:b.y}); if(b.trail.length>20) b.trail.shift();
+        if(b.x<-150||b.x>W+150||b.y<-150||b.y>H+150) bullets.splice(i,1);
+    }
+}
+
+function updateEnemies() {
+    for(let i=enemies.length-1; i>=0; i--) {
+        const e = enemies[i];
+        const dx = player.x - e.x, dy = player.y - e.y, dist = Math.hypot(dx, dy) || 1;
+        e.x += (dx/dist) * e.speed;
+        e.y += (dy/dist) * e.speed;
+        e.trail.push({x:e.x,y:e.y}); if(e.trail.length>30) e.trail.shift();
+
+        if(Math.hypot(player.x-e.x, player.y-e.y) < player.r + e.r) {
+            if(!shield && !inf) health -= 25;
+            enemies.splice(i,1);
+            addParticles(e.x,e.y,'#60d8ff',60);
+            ui();
+            if(health <= 0) { alert(`GAME OVER\nFinal Score: ${score.toLocaleString()}`); location.reload(); }
+            continue;
+        }
+
+        for(let j=bullets.length-1; j>=0; j--) {
+            const b = bullets[j];
+            if(Math.hypot(b.x-e.x, b.y-e.y) < e.r + 12) {
+                e.hp -= b.dmg; bullets.splice(j,1);
+                if(e.hp <= 0) {
+                    score += 250; enemies.splice(i,1);
+                    addParticles(e.x,e.y,'#e0f8ff',80);
+                    ui();
+                }
+                break;
+            }
+        }
+    }
+}
+
+function updateBosses() {
+    for(let i=bosses.length-1; i>=0; i--) {
+        const b = bosses[i];
+        b.y += 2;
+        if(b.y > 250) b.y = 250;
+
+        for(let j=bullets.length-1; j>=0; j--) {
+            const bu = bullets[j];
+            if(Math.abs(bu.x-b.x) < b.w/2 && Math.abs(bu.y-b.y) < b.h/2) {
+                b.hp -= bu.dmg; bullets.splice(j,1);
+                if(b.hp <= 0) {
+                    score += 50000 + wave*20000; bosses.splice(i,1);
+                    addParticles(b.x,b.y,'#ffffff',400);
+                    ui();
+                }
+            }
+        }
+    }
+}
+
+function updateParticles() {
+    for(let i=parts.length-1; i>=0; i--) {
+        const p = parts[i];
+        p.x += p.vx; p.y += p.vy; p.life--;
+        if(p.life <= 0) parts.splice(i,1);
+    }
+}
+
+function addParticles(x,y,col,cnt) {
+    cnt *= (particleQuality + 1) / 3; // Quality scaling
+    for(let i=0; i<cnt; i++) {
+        parts.push({
+            x, y, vx:(Math.random()-0.5)*30, vy:(Math.random()-0.5)*30,
+            life:70, col
+        });
+    }
+}
+
+// === ULTRA-SMOOTH DRAWING ===
+function draw() {
+    // Trails (optimized)
+    player.trail.forEach((p,i) => {
+        ctx.save();
+        ctx.globalAlpha = i/25 * 0.9;
+        ctx.shadowBlur = 45; ctx.shadowColor = '#60d8ff';
+        ctx.fillStyle = '#a0e8ff';
+        ctx.beginPath(); ctx.arc(p.x,p.y,18-i*0.7,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    });
+
+    // Player
+    ctx.shadowBlur = 100; ctx.shadowColor = '#a0e8ff';
+    ctx.fillStyle = '#e0f8ff'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(player.x-14,player.y-10,10,0,Math.PI*2);
+    ctx.arc(player.x+14,player.y-10,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath(); ctx.arc(player.x-14,player.y-10,5,0,Math.PI*2);
+    ctx.arc(player.x+14,player.y-10,5,0,Math.PI*2); ctx.fill();
+
+    // Enemies (2-TAP, HP BARS)
+    enemies.forEach(e => {
+        ctx.shadowBlur = 70; ctx.shadowColor = '#40b8ff';
+        ctx.fillStyle = '#80e8ff'; ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,Math.PI*2); ctx.fill();
+        
+        const pct = e.hp / e.max;
+        ctx.fillStyle = pct > 0.5 ? '#60d8ff' : '#ff6666';
+        ctx.fillRect(e.x-38,e.y-60,76*pct,14);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.strokeRect(e.x-38,e.y-60,76,14);
+    });
+
+    // Bosses
+    bosses.forEach(b => {
+        ctx.shadowBlur = 130; ctx.shadowColor = '#ff4488';
+        ctx.fillStyle = '#ff6699'; ctx.fillRect(b.x-b.w/2,b.y-b.h/2,b.w,b.h);
+        const pct = b.hp / b.max;
+        ctx.fillStyle = pct > 0.3 ? '#60d8ff' : '#ff2244';
+        ctx.fillRect(b.x-140,b.y-190,280*pct,26);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.strokeRect(b.x-140,b.y-190,280,26);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 48px Arial'; ctx.textAlign = 'center';
+        ctx.fillText(b.name,b.x,b.y-210);
+    });
+
+    // Bullets
+    bullets.forEach(b => {
+        if(trailStyle === 0) {
+            ctx.lineWidth = 7; ctx.strokeStyle = b.col; ctx.shadowBlur = 35; ctx.shadowColor = b.col;
+            for(let i=1; i<b.trail.length; i++) {
+                ctx.globalAlpha = i/b.trail.length;
+                ctx.beginPath(); ctx.moveTo(b.trail[i-1].x,b.trail[i-1].y);
+                ctx.lineTo(b.trail[i].x,b.trail[i].y); ctx.stroke();
+            }
+        } else {
+            b.trail.forEach((p,i) => {
+                ctx.save(); ctx.globalAlpha = i/b.trail.length;
+                ctx.shadowBlur = 25; ctx.shadowColor = b.col;
+                ctx.fillStyle = b.col; ctx.beginPath(); ctx.arc(p.x,p.y,8,0,Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 60; ctx.shadowColor = b.col;
+        ctx.fillStyle = b.col; ctx.fillRect(b.x-7,b.y-22,14,44);
+    });
+
+    // Particles
+    parts.forEach(p => {
+        ctx.save(); ctx.globalAlpha = p.life/70;
+        ctx.shadowBlur = 40; ctx.shadowColor = p.col;
+        ctx.fillStyle = p.col; ctx.fillRect(p.x-8,p.y-8,16,16);
+        ctx.restore();
+    });
+}
+
+// === PERFECT SHOP ===
+function updateShop() {
+    document.querySelectorAll('.weapon-btn').forEach(btn => {
+        const id = +btn.dataset.id;
+        btn.classList.toggle('owned', id === weapon);
+        const span = btn.querySelector('span');
+        if(id === weapon) span.textContent = 'OWNED';
+        else span.textContent = weapons[id].cost.toLocaleString();
+        btn.onclick = () => {
+            if(id === 0 || score >= weapons[id].cost) {
+                if(id > 0) score -= weapons[id].cost;
+                weapon = id; ui(); updateShop();
+            }
+        };
+    });
+}
+
+// === START GAME ===
+ui(); updateShop(); loop();
+</script>
+</body>
+</html>
